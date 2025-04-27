@@ -95,6 +95,25 @@ void deallocate_process(MemoryTableEntry **memory_table, int *entries, int proce
     }
 }
 
+// Function to check if the memory is already compacted
+int is_memory_compacted(MemoryTableEntry *memory_table, int entries) {
+    int last_end_address = -1;
+
+    // Check if any allocated block is not continuous
+    for (int i = 0; i < entries; i++) {
+        if (memory_table[i].status == 1) { // Only check occupied blocks
+            if (memory_table[i].starting_address > last_end_address + 1) {
+                // There is a gap between allocated blocks
+                return 0; // Memory is not compacted
+            }
+            last_end_address = memory_table[i].ending_address;
+        }
+    }
+
+    // If no gaps were found, the memory is compacted
+    return 1;
+}
+
 void compact_memory(MemoryTableEntry **memory_table, int *entries, int total_memory_size) {
     int current_address = 0;
     int i = 0;

@@ -93,6 +93,7 @@ int main()
             while (!is_empty(&waiting_queue))
             {
                 Process oldest_waiting = peek_front(&waiting_queue);
+
                 if (allocate_process(&memory_table, &memory_entries, oldest_waiting))
                 {
                     oldest_waiting = dequeue(&waiting_queue);
@@ -101,7 +102,40 @@ int main()
                 }
                 else
                 {
-                    break;
+                    if (is_memory_compacted(memory_table, memory_entries))
+                    {
+                        printf("Process %d from waiting queue could not be allocated memory.\n", oldest_waiting.process_id);
+                        break;
+                    }
+                    else
+                    {
+                        printf("Process %d from waiting queue could not be allocated memory. Trying to compact memory...\n", oldest_waiting.process_id);
+                        printf("\nMemory After Compaction:\n");
+                        print_memory_table(memory_table, memory_entries);
+                        print_memory(memory_table, memory_entries, size_of_mm);
+                        printf("\n");
+
+                        compact_memory(&memory_table, &memory_entries, size_of_mm);
+
+                        printf("\nMemory After Compaction:\n");
+                        print_memory_table(memory_table, memory_entries);
+                        print_memory(memory_table, memory_entries, size_of_mm);
+                        printf("\n");
+
+                        // ⚡ Try allocation again
+                        if (allocate_process(&memory_table, &memory_entries, oldest_waiting))
+                        {
+                            oldest_waiting = dequeue(&waiting_queue);
+                            enqueue(&ready_queue, oldest_waiting);
+                            printf("Process %d from waiting queue allocated memory after compaction.\n", oldest_waiting.process_id);
+                        }
+                        else
+                        {
+                            printf("Process %d from waiting queue could not be allocated memory even after compaction.\n", oldest_waiting.process_id);
+                            // 🚪 Break because if compaction didn't help, next waiting processes also won't fit
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -120,27 +154,37 @@ int main()
                 }
                 else
                 {
-                    printf("Process %d could not be allocated memory. Trying to compact memory...\n", processes[i].process_id);
-
-                    // 📋 Print memory BEFORE compaction
-                    printf("\nMemory Before Compaction:\n");
-                    print_memory_table(memory_table, memory_entries);
-                    print_memory(memory_table, memory_entries, size_of_mm);
-
-                    // 🛠️ Compact
-                    compact_memory(&memory_table, &memory_entries, size_of_mm);
-
-                    // ⚡ Now immediately attempt allocation again
-                    is_allocated = allocate_process(&memory_table, &memory_entries, processes[i]);
-                    if (is_allocated)
+                    if (is_memory_compacted(memory_table, memory_entries))
                     {
-                        printf("Process %d allocated memory successfully after compaction.\n", processes[i].process_id);
-                        enqueue(&ready_queue, processes[i]);
+                        printf("Process %d could not be allocated memory. Added to waiting queue\n", processes[i].process_id);
+                        enqueue(&waiting_queue, processes[i]);
                     }
                     else
                     {
-                        printf("Process %d could not be allocated memory even after compaction. Added to waiting queue.\n", processes[i].process_id);
-                        enqueue(&waiting_queue, processes[i]);
+                        printf("Process %d could not be allocated memory. Trying to compact memory...\n", processes[i].process_id);
+
+                        printf("\nMemory Table Before Compaction\n");
+                        print_memory_table(memory_table, memory_entries);
+                        print_memory(memory_table, memory_entries, size_of_mm);
+                        printf("\n");
+
+                        compact_memory(&memory_table, &memory_entries, size_of_mm);
+
+                        printf("\nMemory Table After Compaction\n");
+                        print_memory_table(memory_table, memory_entries);
+                        print_memory(memory_table, memory_entries, size_of_mm);
+                        printf("\n");
+
+                        if (allocate_process(&memory_table, &memory_entries, processes[i]))
+                        {
+                            printf("Process %d allocated memory successfully after compaction.\n", processes[i].process_id);
+                            enqueue(&ready_queue, processes[i]);
+                        }
+                        else
+                        {
+                            printf("Process %d could not be allocated memory even after compaction. Added to waiting queue.\n", processes[i].process_id);
+                            enqueue(&waiting_queue, processes[i]);
+                        }
                     }
                 }
             }
