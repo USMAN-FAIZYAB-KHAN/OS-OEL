@@ -21,7 +21,7 @@ void insert_memory_block(MemoryTableEntry **table, int *count, int index, Memory
 }
 
 // First Fit allocation
-void allocate_process(MemoryTableEntry **memory_table, int *entries, Process p) {
+int allocate_process(MemoryTableEntry **memory_table, int *entries, Process p) {
     for (int i = 0; i < *entries; i++) {
         if ((*memory_table)[i].status == 0 && (*memory_table)[i].size >= p.size) {
             int remaining = (*memory_table)[i].size - p.size;
@@ -44,11 +44,10 @@ void allocate_process(MemoryTableEntry **memory_table, int *entries, Process p) 
                 insert_memory_block(memory_table, entries, i + 1, new_block);
             }
 
-            printf("Process %d allocated successfully.\n", p.process_id);
-            return;
+            return 1;
         }
     }
-    printf("Process %d could not be allocated (Not enough memory).\n", p.process_id);
+    return 0;
 }
 
 
@@ -93,5 +92,35 @@ void deallocate_process(MemoryTableEntry **memory_table, int *entries, int proce
         } else {
             i++;
         }
+    }
+}
+
+void compact_memory(MemoryTableEntry **memory_table, int *entries, int total_memory_size) {
+    int current_address = 0;
+    int i = 0;
+
+    while (i < *entries) {
+        if ((*memory_table)[i].status == 1) { // Occupied block
+            int block_size = (*memory_table)[i].size;
+            (*memory_table)[i].starting_address = current_address;
+            (*memory_table)[i].ending_address = current_address + block_size - 1;
+            current_address += block_size;
+            i++;
+        } else {
+            // Remove the free block
+            remove_memory_block(memory_table, entries, i);
+        }
+    }
+
+    // After shifting, if there is leftover memory, create one free block
+    if (current_address < total_memory_size) {
+        MemoryTableEntry free_block;
+        free_block.status = 0;
+        free_block.process_id = -1;
+        free_block.starting_address = current_address;
+        free_block.ending_address = total_memory_size - 1;
+        free_block.size = free_block.ending_address - free_block.starting_address + 1;
+
+        insert_memory_block(memory_table, entries, *entries, free_block);
     }
 }

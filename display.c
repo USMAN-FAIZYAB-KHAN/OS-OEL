@@ -35,7 +35,6 @@ void print_process_table(Process *processes, int count) {
 }
 
 void print_memory_table(MemoryTableEntry *table, int count) {
-    printf("\nMemory Table:\n");
     printf("+--------------+--------------+--------------+------------+----------------+\n");
     printf("| Start Addr   | Ending Addr  | Size (bytes) | Status     | Process ID     |\n");
     printf("+--------------+--------------+--------------+------------+----------------+\n");

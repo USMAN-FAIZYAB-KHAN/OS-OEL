@@ -9,6 +9,7 @@ typedef struct
     int process_id;
     int arrival_time;
     int execution_time;
+    int completed;
     int size;
 } Process;
 
@@ -19,10 +20,8 @@ typedef struct {
     int rear;
 } ProcessQueue;
 
-// Function prototype for getting the size of a process
 void get_size(int *size_in_bytes, const char *prompt);
-
-// Queue methods prototypes
+int all_processes_completed(Process *processes, int count);
 void init_queue(ProcessQueue *queue);  // Initialize the queue
 int is_empty(ProcessQueue *queue);     // Check if the queue is empty
 int is_full(ProcessQueue *queue);      // Check if the queue is full

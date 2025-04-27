@@ -14,7 +14,8 @@ typedef struct {
 
 // Function prototypes
 void insert_memory_block(MemoryTableEntry **table, int *count, int index, MemoryTableEntry new_entry);
-void allocate_process(MemoryTableEntry **memory_table, int *entries, Process p);
+int allocate_process(MemoryTableEntry **memory_table, int *entries, Process p);
+void compact_memory(MemoryTableEntry **memory_table, int *entries, int total_memory_size);
 void remove_memory_block(MemoryTableEntry **memory_table, int *entries, int index);
 void deallocate_process(MemoryTableEntry **memory_table, int *entries, int process_id);
 

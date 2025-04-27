@@ -27,6 +27,16 @@ void get_size(int *size_in_bytes, const char *prompt) {
     }
 }
 
+// Function to check if all processes are completed
+int all_processes_completed(Process *processes, int count) {
+    for (int i = 0; i < count; i++) {
+        if (processes[i].completed == 0) {  // Process is not completed
+            return 0;
+        }
+    }
+    return 1;  // All processes are completed
+}
+
 // Initialize the queue
 void init_queue(ProcessQueue *queue) {
     queue->front = -1;
