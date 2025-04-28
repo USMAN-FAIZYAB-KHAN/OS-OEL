@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "process.h"
+#include "display.h"
 
-// Function to get the size of a process in bytes based on the user's input
+// Get the size of a process in bytes based on user input
 void get_size(int *size_in_bytes, const char *prompt) {
     float size;
     char unit[3]; 
@@ -27,28 +28,28 @@ void get_size(int *size_in_bytes, const char *prompt) {
     }
 }
 
-// Function to check if all processes are completed
+// Check if all processes are completed
 int all_processes_completed(Process *processes, int count) {
     for (int i = 0; i < count; i++) {
-        if (processes[i].completed == 0) {  // Process is not completed
+        if (processes[i].completed == 0) {  // Process not completed
             return 0;
         }
     }
     return 1;  // All processes are completed
 }
 
-// Initialize the queue
+// Initialize the process queue
 void init_queue(ProcessQueue *queue) {
     queue->front = -1;
     queue->rear = -1;
 }
 
-// Check if the queue is empty
+// Check if the process queue is empty
 int is_empty(ProcessQueue *queue) {
     return queue->front == -1;
 }
 
-// Check if the queue is full
+// Check if the process queue is full
 int is_full(ProcessQueue *queue) {
     return queue->rear == MAX_PROCESSES - 1;
 }
@@ -60,24 +61,24 @@ void enqueue(ProcessQueue *queue, Process p) {
         return;
     }
     if (is_empty(queue)) {
-        queue->front = 0;  // If the queue was empty, set front to 0
+        queue->front = 0;  // Set front to 0 if queue was empty
     }
     queue->rear++;
     queue->items[queue->rear] = p;
 }
 
-// Remove and return a process from the queue
+// Remove and return the process from the front of the queue
 Process dequeue(ProcessQueue *queue) {
     if (is_empty(queue)) {
         printf("Queue is empty. Cannot dequeue.\n");
-        Process empty_process = {0};  // Return a default empty process
+        Process empty_process = {0};  // Return default empty process
         return empty_process;
     }
 
     Process p = queue->items[queue->front];
     
-    if (queue->front == queue->rear) {  // If only one element was in the queue
-        queue->front = queue->rear = -1;  // Reset the queue to empty
+    if (queue->front == queue->rear) {  // Only one process in the queue
+        queue->front = queue->rear = -1;  // Reset queue
     } else {
         queue->front++;
     }
@@ -85,13 +86,29 @@ Process dequeue(ProcessQueue *queue) {
     return p;
 }
 
-// View the process at the front without removing it
+// View the process at the front of the queue without removing it
 Process peek_front(ProcessQueue *queue) {
     if (is_empty(queue)) {
         printf("Queue is empty. No front element.\n");
-        Process empty_process = {0};  // Return a default empty process
+        Process empty_process = {0};  // Return default empty process
         return empty_process;
     }
 
     return queue->items[queue->front];
 }
+
+// Display the contents of the queue
+void display_queue(ProcessQueue *queue) {
+    dualprintf("------------------------------------------------------------\n");
+    dualprintf("|");
+
+    if (!is_empty(queue)) {
+        for (int i = queue->front; i <= queue->rear; i++) {
+            dualprintf("  P%-2d  |", queue->items[i].process_id);
+        }
+    }
+
+    dualprintf("\n");
+    dualprintf("------------------------------------------------------------\n");
+}
+

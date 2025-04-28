@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include "memory.h"
 
-// Insert memory block into memory table
+// Insert a memory block into the memory table at a specific index
 void insert_memory_block(MemoryTableEntry **table, int *count, int index, MemoryTableEntry new_entry) {
+    // Reallocate memory to make space for the new block
     *table = (MemoryTableEntry *)realloc(*table, sizeof(MemoryTableEntry) * (*count + 1));
 
     if (*table == NULL) {
@@ -11,65 +12,66 @@ void insert_memory_block(MemoryTableEntry **table, int *count, int index, Memory
         exit(0);
     }
 
-    // Shift right
+    // Shift blocks to the right to make space at the index
     for (int i = *count; i > index; i--) {
         (*table)[i] = (*table)[i - 1];
     }
 
+    // Insert the new memory block
     (*table)[index] = new_entry;
     (*count)++;
 }
 
-// First Fit allocation
+// Allocate memory to a process using First Fit strategy
 int allocate_process(MemoryTableEntry **memory_table, int *entries, Process p) {
     for (int i = 0; i < *entries; i++) {
+        // Find first free block large enough
         if ((*memory_table)[i].status == 0 && (*memory_table)[i].size >= p.size) {
             int remaining = (*memory_table)[i].size - p.size;
 
-            // Occupy current block
+            // Occupy the current block
             (*memory_table)[i].status = 1;
             (*memory_table)[i].process_id = p.process_id;
             (*memory_table)[i].size = p.size;
             (*memory_table)[i].ending_address = (*memory_table)[i].starting_address + p.size - 1;
     
+            // If there is leftover space, create a new free block
             if (remaining > 0) {
-                // Create a new free block for leftover space
                 MemoryTableEntry new_block;
                 new_block.status = 0;
                 new_block.size = remaining;
                 new_block.process_id = -1;
                 new_block.starting_address = (*memory_table)[i].starting_address + p.size;
-                new_block.ending_address = (*memory_table)[i].starting_address + p.size + remaining -1;
+                new_block.ending_address = (*memory_table)[i].starting_address + p.size + remaining - 1;
 
                 insert_memory_block(memory_table, entries, i + 1, new_block);
             }
 
-            return 1;
+            return 1; // Allocation successful
         }
     }
-    return 0;
+    return 0; // Allocation failed
 }
 
-
-// Function to remove an entry from the memory table array
+// Remove a memory block from the memory table
 void remove_memory_block(MemoryTableEntry **memory_table, int *entries, int index) {
-    // Shift all elements after the index one position left
+    // Shift all blocks after the index one position to the left
     for (int j = index; j < *entries - 1; j++) {
         (*memory_table)[j] = (*memory_table)[j + 1];
     }
-    
-    // Reduce the count of entries
+
+    // Decrease the total number of entries
     (*entries)--;
-    
-    // Reallocate memory for the smaller array
+
+    // Reallocate memory for the reduced array
     *memory_table = realloc(*memory_table, sizeof(MemoryTableEntry) * (*entries));
 }
 
-// Updated deallocate_process function using the new helper function
+// Deallocate memory occupied by a specific process
 void deallocate_process(MemoryTableEntry **memory_table, int *entries, int process_id) {
     int found = 0;
     
-    // Mark all blocks with this process as free
+    // Mark all blocks belonging to the process as free
     for (int i = 0; i < *entries; i++) {
         if ((*memory_table)[i].process_id == process_id) {
             (*memory_table)[i].status = 0;
@@ -77,17 +79,17 @@ void deallocate_process(MemoryTableEntry **memory_table, int *entries, int proce
             found = 1;
         }
     }
-    
-    if (!found) return;
-    
+
+    if (!found) return; // Process not found
+
     // Merge adjacent free blocks
     for (int i = 0; i < *entries - 1; ) {
         if ((*memory_table)[i].status == 0 && (*memory_table)[i+1].status == 0) {
-            // Merge blocks
+            // Merge with next block
             (*memory_table)[i].size += (*memory_table)[i+1].size;
             (*memory_table)[i].ending_address = (*memory_table)[i+1].ending_address;
-            
-            // Use our new function to remove the next block
+
+            // Remove the next block
             remove_memory_block(memory_table, entries, i + 1);
         } else {
             i++;
@@ -95,43 +97,42 @@ void deallocate_process(MemoryTableEntry **memory_table, int *entries, int proce
     }
 }
 
-// Function to check if the memory is already compacted
+// Check if the memory is already compacted (no gaps between occupied blocks)
 int is_memory_compacted(MemoryTableEntry *memory_table, int entries) {
     int last_end_address = -1;
 
-    // Check if any allocated block is not continuous
     for (int i = 0; i < entries; i++) {
-        if (memory_table[i].status == 1) { // Only check occupied blocks
+        if (memory_table[i].status == 1) { // Check only occupied blocks
             if (memory_table[i].starting_address > last_end_address + 1) {
-                // There is a gap between allocated blocks
-                return 0; // Memory is not compacted
+                return 0; // Gap found, not compacted
             }
             last_end_address = memory_table[i].ending_address;
         }
     }
 
-    // If no gaps were found, the memory is compacted
-    return 1;
+    return 1; // No gaps found, memory is compacted
 }
 
+// Compact memory by moving occupied blocks together
 void compact_memory(MemoryTableEntry **memory_table, int *entries, int total_memory_size) {
     int current_address = 0;
     int i = 0;
 
+    // Move occupied blocks to the start
     while (i < *entries) {
-        if ((*memory_table)[i].status == 1) { // Occupied block
+        if ((*memory_table)[i].status == 1) {
             int block_size = (*memory_table)[i].size;
             (*memory_table)[i].starting_address = current_address;
             (*memory_table)[i].ending_address = current_address + block_size - 1;
             current_address += block_size;
             i++;
         } else {
-            // Remove the free block
+            // Remove free block
             remove_memory_block(memory_table, entries, i);
         }
     }
 
-    // After shifting, if there is leftover memory, create one free block
+    // Add a single free block at the end if there is remaining space
     if (current_address < total_memory_size) {
         MemoryTableEntry free_block;
         free_block.status = 0;
